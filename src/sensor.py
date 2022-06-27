@@ -1,4 +1,4 @@
-from util import read_csv, read_wav
+from util.file import read_csv, read_wav
 
 
 class ArraySensor:

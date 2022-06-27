@@ -1,10 +1,10 @@
 from src.sensor import ArraySensor
 import numpy as np
-import util.plotfunctions as plt
+import util.plot as plt
 
 
 def get_timesteps(samplerate, channels):
-    return np.linspace(0, channels.shape[0] / samplerate, num=channels.shape[1])
+    return np.linspace(0, channels.shape[0] / samplerate, num=channels.shape[0])
 
 
 if __name__ == '__main__':
