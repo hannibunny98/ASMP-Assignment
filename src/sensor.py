@@ -21,7 +21,7 @@ def array_transfer_vector(factors: np.ndarray, directions: np.ndarray, sensor_po
 
     directions = np.c_[directions, np.sqrt(1 - np.square(directions).sum(axis=1))]
 
-    return np.exp(np.multiply.outer(factors, (directions @ sensor_positions.T).T))
+    return np.exp(np.multiply.outer(1j * factors, (directions @ sensor_positions.T).T))
 
 
 class ArraySensor:
@@ -68,7 +68,7 @@ class ArraySensor:
         A : ndarray (complex)
             The array transfer matrix A[k, m, q] = a_m(u_q; w_k)."""
 
-        return array_transfer_vector(1j * frequencies / self.velocity_factor, directions, self.positions)
+        return array_transfer_vector(frequencies / self.velocity_factor, directions, self.positions)
 
     def Z(self, window: str = 'hann', nperseg: int = 256) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Compute the Short Time Fourier Transform (STFT).
@@ -96,4 +96,4 @@ class ArraySensor:
 
         f, t, Z = stft(self.measurments, 1 / self.samplerate, axis=0, window=window, nperseg=nperseg)
 
-        return f, t, Z.T
+        return f * self.samplerate**2, t, Z.T
