@@ -6,9 +6,22 @@ from util.file import read_csv, read_wav
 
 
 def array_transfer_vector(factors: np.ndarray, directions: np.ndarray, sensor_positions: np.ndarray):
+    """Computes the array transfer vector.
+
+    Parameters
+    ----------
+    factors : ndarray (vector of length K)
+    directions : ndarray (Qx2 matrix)
+    sensor_positions : ndarray (Mx3 matrix)
+
+    Returns
+    -------
+    A : ndarray (complex)
+        The array transfer matrix A[k, m, q] = a_m(u_q; w_k)."""
+
     directions = np.c_[directions, np.sqrt(1 - np.square(directions).sum(axis=1))]
 
-    return np.exp(np.outer(factors, (directions @ sensor_positions.T).T))
+    return np.exp(np.multiply.outer(factors, (directions @ sensor_positions.T).T))
 
 
 class ArraySensor:
@@ -38,6 +51,7 @@ class ArraySensor:
         self.positions = positions
         self.samplerate = samplerate
         self.measurments = measurments
+        # measurments[t, m]
 
         self.velocity_factor = velocity_factor
 
@@ -77,8 +91,9 @@ class ArraySensor:
             Array of sample frequencies.
         t : ndarray
             Array of segment times.
-        Zxx : ndarray
-            STFT of `x`. By default, the last axis of `Zxx` corresponds
-            to the segment times."""
+        Z : ndarray
+            STFT of `self.measurments` Z[t, m, k]."""
 
-        return stft(self.measurments, 1 / self.samplerate, axis=0, window=window, nperseg=nperseg)
+        f, t, Z = stft(self.measurments, 1 / self.samplerate, axis=0, window=window, nperseg=nperseg)
+
+        return f, t, Z.T
