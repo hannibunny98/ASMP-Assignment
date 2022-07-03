@@ -8,11 +8,14 @@ def get_timesteps(samplerate, channels):
 
 
 if __name__ == '__main__':
-    array_sensor = ArraySensor('./Measurements/CrowsNest.csv', './Measurements/measurements3.wav')
+    array_sensor = ArraySensor('./Measurements/CrowsNest.csv', './Measurements/measurements3.wav', 340.29)
 
     print(array_sensor.positions)
     print(array_sensor.measurments)
     print(array_sensor.samplerate)
+
+    print(array_sensor.Z()[0])
+    exit()
 
     Time = get_timesteps(array_sensor.samplerate, array_sensor.measurments)
     plt.plot_channels(array_sensor.measurments, Time)
