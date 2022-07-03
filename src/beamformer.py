@@ -23,9 +23,12 @@ class Beamformer:
     def spatial_power_spectrum(self, directions: np.ndarray):
         a = self.A(directions)
 
-        c = np.einsum('kmq, tmk -> ktq', a.conj(), self.Z)
+        c = 0
 
-        return (np.abs(c)**2).sum(axis=0)
+        for k in range(self.Z.shape[-1]):
+            c += np.abs(a[k].conj().T @ self.Z.T[k])**2
+
+        return c.T
 
 
 class ConventionalBeamformer(Beamformer):
