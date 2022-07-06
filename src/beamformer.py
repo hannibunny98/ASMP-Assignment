@@ -1,12 +1,14 @@
 import numpy as np
 
+from tqdm import tqdm
+
 from .sensor import ArraySensor
 
 
 class Beamformer:
 
     def __init__(self, array_sensor: ArraySensor):
-        f, t, Z = array_sensor.Z(nperseg=4096)
+        f, t, Z = array_sensor.Z(nperseg=1024)
 
         self.f = f
         self.t = t
@@ -15,50 +17,79 @@ class Beamformer:
         self.R = Z @ Z.swapaxes(-2, -1).conj() / Z.shape[-1]
         self.R_inv = np.linalg.inv(self.R)
 
-        self.A = lambda x: array_sensor.A(x, self.f)
+        self.A = lambda u, f: array_sensor.A(u, f)
 
-    def spatial_receiving_characteristic(self, directions: np.ndarray):
+    def weighting_vector(self, u: np.ndarray) -> np.ndarray:
+        """Computes the complex weighting vectors.
+
+        Parameters
+        ----------
+        u : ndarray
+            Directions in form of a Qx2 or Qx3 matrix.
+
+        Returns
+        -------
+        C : ndarray (complex)
+            The weighting factors c(u) as a KxMxQ matrix."""
+
+        result = []
+
+        for idx in range(len(self.f)):
+            result.append(self._weighting_vector(u, idx))
+
+        return np.array(result)
+
+    def _weighting_vector(self, u: np.ndarray, idx: int) -> np.ndarray:
         raise NotImplementedError()
 
-    def spatial_power_spectrum(self, directions: np.ndarray):
-        a = self.A(directions)
+    def spatial_power_spectrum(self, u: np.ndarray) -> np.ndarray:
+        result = 0
 
-        c = 0
+        for idx in tqdm(range(len(self.f))):
+            result += np.abs(self._spatial_power_spectrum(u, idx))
 
-        for k in range(self.Z.shape[-1]):
-            c += np.abs(a[k].conj().T @ self.Z.T[k])**2
+        return result
 
-        return c.T
+    def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
+        raise NotImplementedError()
 
 
 class ConventionalBeamformer(Beamformer):
 
-    def spatial_receiving_characteristic(self, directions: np.ndarray):
-        a = self.A(directions)
+    def _weighting_vector(self, u: np.ndarray, idx: int) -> np.ndarray:
+        a = self.A(u, self.f[idx])
 
-        c = np.sqrt(np.einsum('kmq, kmq -> kq', a.conj(), a))
-        c = a / c[:, None, :]
+        # should be equivalent to a / sqrt(a.H * a) but way faster
+        return a / np.linalg.norm(a, axis=0)
 
-        return np.einsum('kmq, kmq -> kq', c.conj(), a)
+    def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
+        a = self.A(u, self.f[idx])
 
-    def spatial_power_spectrum(self, directions: np.ndarray):
-        a = self.A(directions)
+        c = np.einsum('mq, nq, mn -> q', a.conj(), a, self.R[idx])
 
-        return np.einsum('kmq, tnm, kmq -> tknq', a.conj(), self.R, a) \
-            / np.einsum('kmq, kmq -> kq', a.conj(), a)
+        return c / np.linalg.norm(a, axis=0)
 
 
 class CaponBeamformer(Beamformer):
 
-    def spatial_receiving_characteristic(self, directions: np.ndarray):
-        a = self.A(directions)
+    def _weighting_vector(self, u: np.ndarray, idx: int) -> np.ndarray:
+        a = self.A(u, self.f[idx])
 
-        c = np.einsum('tnm, kmq -> tknq', self.R_inv, a) \
-            / np.einsum('kmq, tnm, kmq -> tknq', a.conj(), self.R_inv, a)
+        c = np.einsum('mq, nq, mn -> q', a.conj(), a, self.R_inv[idx])
 
-        return np.einsum('tkmq, kmq -> tkq', c.conj(), a)
+        return (self.R_inv[idx] @ a) / c
 
-    def spatial_power_spectrum(self, directions: np.ndarray):
-        a = self.A(directions)
+    def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
+        a = self.A(u, self.f[idx])
 
-        return 1 / np.einsum(f'knq, tnm, kmq -> tkq', a.conj(), self.R_inv, a)
+        c = np.einsum('mq, nq, mn -> q', a.conj(), a, self.R_inv[idx])
+
+        return 1 / c
+
+
+class WierdBeamformer(Beamformer):
+
+    def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
+        a = self.A(u, self.f[idx])
+
+        return (a.conj().T @ self.Z[idx]).sum(axis=1) / self.Z.shape[-1]

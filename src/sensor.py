@@ -5,23 +5,48 @@ from scipy.signal import stft
 from util.file import read_csv, read_wav
 
 
-def array_transfer_vector(factors: np.ndarray, directions: np.ndarray, sensor_positions: np.ndarray):
+FREQUENCY = 1
+WAVELENGTH = 2
+ANGULAR_FREQUENCY = 3
+
+
+def array_transfer_vector(u: np.ndarray, d: np.ndarray, x: np.ndarray | float, v: float, xtype: int = FREQUENCY):
     """Computes the array transfer vector.
 
     Parameters
     ----------
-    factors : ndarray (vector of length K)
-    directions : ndarray (Qx2 matrix)
-    sensor_positions : ndarray (Mx3 matrix)
+    u : ndarray
+        Directions in form of a Qx2 or Qx3 matrix.
+    d : ndarray
+        Array element positions in form of a Mx3 matrix.
+    x : ndarray | float
+        Waveparameter in form of either a vector of length K
+        or a singular value. See xtype for input types.
+    v : float
+        Wave propagation speed of the measured wave type.
+        e.g. 340.29 for sound waves or 299792458 for electromagnetic waves.
+    xtype : int (FREQUENCY|ANGULAR_FREQUENCY|WAVELENGTH)
+        Weather x is given as frequency, angular frequency or
+        wavelength values. (default = FREQUENCY)
 
     Returns
     -------
     A : ndarray (complex)
         The array transfer matrix A[k, m, q] = a_m(u_q; w_k)."""
 
-    directions = np.c_[directions, np.sqrt(1 - np.square(directions).sum(axis=1))]
+    if xtype == FREQUENCY:
+        x = 2 * np.pi * x / v
+    if xtype == WAVELENGTH:
+        x = 2 * np.pi / x
+    if xtype == ANGULAR_FREQUENCY:
+        x = x / v
 
-    return np.exp(np.multiply.outer(1j * factors, (directions @ sensor_positions.T).T))
+    if u.shape[-1] == 2:
+        u = np.c_[u, np.emath.sqrt(1 - np.square(u).sum(axis=1))]
+    if u.shape[-1] == 3:
+        u = (u.T / np.sqrt((u**2).sum(axis=1))).T
+
+    return np.exp(np.multiply.outer(1j * x, (u @ d.T).T))
 
 
 class ArraySensor:
@@ -55,20 +80,52 @@ class ArraySensor:
 
         self.velocity_factor = velocity_factor
 
-    def A(self, directions: np.ndarray, frequencies: np.ndarray):
+    def A(self, u: np.ndarray, x: np.ndarray | float, xtype: int = FREQUENCY):
         """Computes the array transfer vector.
 
         Parameters
         ----------
-        directions : ndarray (Qx2 matrix)
-        frequencies : ndarray (vector of length K)
+        u : ndarray
+            Directions in form of a Qx2 or Qx3 matrix.
+        x : ndarray | float
+            Waveparameter in form of either a vector of length K
+            or a singular value. See xtype for input types.
+        xtype : int (FREQUENCY|ANGULAR_FREQUENCY|WAVELENGTH)
+            Weather x is given as frequency, angular frequency or
+            wavelength values. (default = FREQUENCY)
 
         Returns
         -------
         A : ndarray (complex)
             The array transfer matrix A[k, m, q] = a_m(u_q; w_k)."""
 
-        return array_transfer_vector(frequencies / self.velocity_factor, directions, self.positions)
+        return array_transfer_vector(u, self.positions, x, self.velocity_factor, xtype)
+
+    def AF(self, u0: np.ndarray, u_: np.ndarray, x: np.ndarray | float, xtype: int = FREQUENCY):
+        """Computes the array factor.
+
+        Parameters
+        ----------
+        u0 : ndarray
+            Directions in form of a 1x2 or 1x3 matrix.
+        u_ : ndarray
+            Directions in form of a Qx2 or Qx3 matrix.
+        x : ndarray | float
+            Waveparameter in form of either a vector of length K
+            or a singular value. See xtype for input types.
+        xtype : int (FREQUENCY|ANGULAR_FREQUENCY|WAVELENGTH)
+            Weather x is given as frequency, angular frequency or
+            wavelength values. (default = FREQUENCY)
+
+        Returns
+        -------
+        A : ndarray (complex)
+            The array transfer matrix A[k, m, q] = a_m(u_q; w_k)."""
+
+        a0 = array_transfer_vector(u0, self.positions, x, self.velocity_factor, xtype)
+        a_ = array_transfer_vector(u_, self.positions, x, self.velocity_factor, xtype)
+
+        return a0.conj().T @ a_
 
     def Z(self, window: str = 'hann', nperseg: int = 256) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Compute the Short Time Fourier Transform (STFT).
@@ -92,8 +149,8 @@ class ArraySensor:
         t : ndarray
             Array of segment times.
         Z : ndarray
-            STFT of `self.measurments` Z[t, m, k]."""
+            STFT of `self.measurments` Z[k, m, t]."""
 
-        f, t, Z = stft(self.measurments, 1 / self.samplerate, axis=0, window=window, nperseg=nperseg)
+        f, t, Z = stft(self.measurments, 1 / self.samplerate, axis=0, window=window, nperseg=nperseg)  # , noverlap=nperseg - nperseg // 4)
 
-        return f * self.samplerate**2, t, Z.T
+        return f * self.samplerate**2, t, Z

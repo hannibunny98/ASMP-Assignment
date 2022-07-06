@@ -48,8 +48,10 @@ def read_wav(filename: str) -> np.ndarray:
     wav = wave.open(filename)
     wav.setpos(0)
 
-    type = {1: np.int8, 2: np.int16, 4: np.int32}.get(wav.getsampwidth())
+    type = {1: np.int8, 2: np.int16, 4: np.int32}[wav.getsampwidth()]
 
     signal = np.frombuffer(wav.readframes(wav.getnframes()), dtype=type)
+    signal = signal.reshape(-1, wav.getnchannels())
+    # signal = signal / np.iinfo(type).max
 
-    return signal.reshape(-1, wav.getnchannels()), wav.getframerate()
+    return signal, wav.getframerate()
