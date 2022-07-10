@@ -8,7 +8,14 @@ from .sensor import ArraySensor
 class Beamformer:
 
     def __init__(self, array_sensor: ArraySensor):
-        f, t, Z = array_sensor.Z(nperseg=1024)
+        f, t, Z = array_sensor.Z(nperseg=8192)
+
+        ### TMP ###
+        T = Z.shape[-1] // 2
+
+        t = [t[T]]
+        Z = Z[..., T][..., None]
+        ###########
 
         self.f = f
         self.t = t
