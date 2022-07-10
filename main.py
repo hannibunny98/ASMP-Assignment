@@ -24,5 +24,5 @@ if __name__ == '__main__':
     # plt.plot_spatial_power_spectrum(beamformer, 50, center=[-0.13833, -0.85917], scale=0.0001, w=-1)
 
     ### Task 6 ###
-    plt.plot_beampattern(beamformer, [0, 0], 9000, 500, w=-1)
-    plt.plot_spatial_filter(beamformer, [0.5, 0.5], [[-0.5, -0.5]], 9000, 500, w=-1)
+    plt.plot_beampattern(beamformer, [0, 0], 9000, 500, w=-1)  # = array factor
+    plt.plot_spatial_filter(beamformer, [0.5, 0.5], [[-0.5, -0.5], [0.3, 0.7]], 9000, 500, w=-1)

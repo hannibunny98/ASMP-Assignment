@@ -187,8 +187,8 @@ class ConventionalBeamformer(Beamformer):
     def _weighting_vector(self, u: np.ndarray, idx: int) -> np.ndarray:
         a = self.A(u, self.f[idx])
 
-        # should be equivalent to a / sqrt(a.H * a) or a / np.linalg.norm(a, axis=0) but way faster
-        return a / np.sqrt(a.shape[0])
+        # should be equivalent to a / sqrt(a.H * a) but way faster
+        return a / np.linalg.norm(a, axis=0)
 
     def _spatial_filter(self, u: np.ndarray, v: np.ndarray, idx: int):
         b = self.B(u, v, self.f[idx])
@@ -197,14 +197,9 @@ class ConventionalBeamformer(Beamformer):
         return b / np.linalg.norm(b, axis=0)
 
     def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
-        a = self.A(u, self.f[idx])
+        c = self._weighting_vector(u, idx)
 
-        # c = np.array([a.T[i].conj() @ self.R[idx] @ a[:, i] for i in range(a.shape[-1])])
-
-        c = np.einsum('mq, nq, mn -> q', a.conj(), a, self.R[idx])
-
-        # should be equivalent to c / a.H * a or c / np.linalg.norm(a, axis=0)**2 but way faster
-        return c / a.shape[0]
+        return np.einsum('mq, mn, nq -> q', c.conj(), self.R[idx], c)
 
 
 class CaponBeamformer(Beamformer):
@@ -229,11 +224,3 @@ class CaponBeamformer(Beamformer):
         c = np.einsum('mq, nq, mn -> q', a.conj(), a, self.R_inv[idx])
 
         return 1 / c
-
-
-class WierdBeamformer(Beamformer):
-
-    def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
-        a = self.A(u, self.f[idx])
-
-        return np.linalg.norm(a.conj().T @ self.Z[idx], axis=-1)**2
