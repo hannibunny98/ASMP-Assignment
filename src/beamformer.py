@@ -65,6 +65,7 @@ class Beamformer:
         -------
         B : ndarray (complex)
             The array transfer matrix B[m, q] = b_m(u_q, v; frequency)."""
+
         P = projection_matrix(self.A(v, frequency), orthogonal=True)
         A = self.A(u, frequency)
 

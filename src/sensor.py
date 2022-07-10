@@ -44,7 +44,7 @@ def array_transfer_vector(u: np.ndarray, d: np.ndarray, x: np.ndarray | float, v
     if u.shape[-1] == 2:
         u = np.c_[u, np.emath.sqrt(1 - np.square(u).sum(axis=1))]
     if u.shape[-1] == 3:
-        u = (u.T / np.sqrt((u**2).sum(axis=1))).T
+        u = (u.T / np.sqrt(np.square(u).sum(axis=1))).T
 
     return np.exp(np.multiply.outer(1j * x, (u @ d.T).T))
 
