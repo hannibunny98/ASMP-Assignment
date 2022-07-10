@@ -1,25 +1,28 @@
 from src.sensor import ArraySensor
-from src.beamformer import ConventionalBeamformer, CaponBeamformer, WierdBeamformer, Beamformer
-
-import numpy as np
+from src.beamformer import ConventionalBeamformer, CaponBeamformer
 
 import util.plot as plt
 
 
-def get_timesteps(samplerate, channels):
-    return np.linspace(0, channels.shape[0] / samplerate, num=channels.shape[0])
-
-
 if __name__ == '__main__':
-    array_sensor = ArraySensor('./Measurements/CrowsNest.csv', './Measurements/measurements1.wav', 343)
-    beamformer = CaponBeamformer(array_sensor)
+    array_sensor = ArraySensor('./Measurements/CrowsNest.csv', './Measurements/measurements3.wav', 343)
+    beamformer = ConventionalBeamformer(array_sensor)
 
-    # plt.plot_array_factor(array_sensor, 9000, 500, w=1)
-    # plt.plot_array_transfer_vector(array_sensor, 9000, 500, w=1)
+    ### Task 1 ###
+    plt.plot_channels(array_sensor)
+
+    ### Task 2 ###
+    plt.plot_channel_spectogram(array_sensor, 0)
+
+    ### Task 3 ###
+    plt.plot_array_transfer_vector(array_sensor, 9000, 500, w=1)
+
+    ### Task 4 ###
     plt.plot_spatial_power_spectrum(beamformer, 100, w=-1)
-    # plt.plot_spatial_power_spectrum(beamformer, 50, center=[-0.13833, -0.85917], scale=0.0001, w=-1)
-    # plt.plot_beampattern(beamformer, 9000, 100, w=1)
 
-    # Time = get_timesteps(array_sensor.samplerate, array_sensor.measurments)
-    # plt2.plot_channels(array_sensor.measurments, Time)
-    # plt2.plot_channel_spectogram(array_sensor.measurments.T[0], array_sensor.samplerate)
+    ### Task 5 ###
+    # plt.plot_spatial_power_spectrum(beamformer, 50, center=[-0.13833, -0.85917], scale=0.0001, w=-1)
+
+    ### Task 6 ###
+    plt.plot_beampattern(beamformer, [0, 0], 9000, 500, w=-1)
+    plt.plot_spatial_filter(beamformer, [0.5, 0.5], [[-0.5, -0.5]], 9000, 500, w=-1)

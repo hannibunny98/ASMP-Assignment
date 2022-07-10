@@ -47,7 +47,7 @@ class Beamformer:
         A : ndarray (complex)
             The array transfer matrix A[m, q] = a_m(u_q; frequency)."""
 
-        return self.array_sensor(u, frequency)
+        return self.array_sensor.A(u, frequency)
 
     def B(self, u: np.ndarray, v: np.ndarray, frequency: float):
         """Returns array transfer vectors with deterministic nulling.
@@ -76,11 +76,23 @@ class Beamformer:
 
         return (st + gt) // 2
 
-    def beampattern(self, u0: np.ndarray, u_: np.ndarray, frequency: float):
-        C = self._weighting_vector(u0, self._nearest_k(frequency))
-        A = self.A(u_, frequency)
+    def beampattern(self, u: np.ndarray, c: np.ndarray, frequency: float):
+        """Computes the beampattern function for a given weight vector.
 
-        return C.conj().T @ A
+        Parameters
+        ----------
+        u : ndarray
+            Directions in form of a Qx2 or Qx3 matrix.
+        c : ndarray
+            The weight vector to be applied.
+        frequency : float | None
+            Frequency for which to calculate c. (default=None)
+
+        Returns
+        -------
+        beampattern : ndarray"""
+
+        return c.conj().T @ self.A(u, frequency)
 
     def weighting_vector(self, u: np.ndarray, frequency: float = None) -> np.ndarray:
         """Computes the complex weighting vectors.

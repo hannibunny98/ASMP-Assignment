@@ -5,20 +5,24 @@ from src.beamformer import Beamformer
 from src.sensor import ArraySensor
 
 
-def plot_channels(channels, Time):
+def plot_channels(array_sensor: ArraySensor):
+    channels = array_sensor.measurments.T
+    time = np.linspace(0, channels.shape[1] / array_sensor.samplerate, num=channels.shape[1])
+
     plt.figure(1)
     plt.title('Signals')
     plt.xlabel('Time [s]')
     plt.ylabel('Amplitude (linear scale)')
-    for i in range(channels.shape[1]):
-        plt.plot(Time, [x / (10 ** 4) / 5 + i + 1 for x in channels.T[i]])
+    for i, channel in enumerate(channels):
+        plt.plot(time, channel / (2.25 * np.abs(channel).max()) + i + 1)
     plt.show()
 
 
-def plot_channel_spectogram(channel, framerate):
+def plot_channel_spectogram(array_sensor: ArraySensor, channel: int):
+    channel = array_sensor.measurments.T[channel]
 
     plt.figure(2)
-    plt.specgram(channel, Fs=framerate)
+    plt.specgram(channel, Fs=array_sensor.samplerate)
     plt.title('Spectogram of channel 1')
     plt.xlabel('Time [s]')
     plt.ylabel('Frequency [Hz]')
@@ -93,13 +97,13 @@ def plot_array_transfer_vector(array_sensor: ArraySensor, frequency: float, n: i
     plt.show()
 
 
-def plot_array_factor(array_sensor: ArraySensor, frequency: float, n: int, w: int = 1):
-    u0 = np.array([[0, 0]])
-    u_, m = get_u(n, w=w)
+def plot_beampattern(beamformer: Beamformer, u0: list[float, float], frequency: float, n: int, w: int = 1):
+    u, m = get_u(n, w=w)
 
-    AF = array_sensor.AF(u0, u_, frequency)[0]
+    C = beamformer.A(np.array([u0]), frequency)
+    B = beamformer.beampattern(u, C, frequency)[0]
 
-    image = get_images(np.abs(AF), m, n)
+    image = get_images(np.abs(B), m, n)
 
     _, ax = plt.subplots(1)
 
@@ -108,11 +112,11 @@ def plot_array_factor(array_sensor: ArraySensor, frequency: float, n: int, w: in
     plt.show()
 
 
-def plot_beampattern(beamformer: Beamformer, frequency: float, n: int, w: int = 1):
-    u0 = np.array([[0, 0]])
-    u_, m = get_u(n, w=w)
+def plot_spatial_filter(beamformer: Beamformer, u0: list[float, float], v: list[list[float, float], ], frequency: float, n: int, w: int = 1):
+    u, m = get_u(n, w=w)
 
-    B = beamformer.beampattern(u0, u_, frequency)[0]
+    C = beamformer.spatial_filter(np.array([u0]), np.array(v), frequency)
+    B = beamformer.beampattern(u, C, frequency)[0]
 
     image = get_images(np.abs(B), m, n)
 

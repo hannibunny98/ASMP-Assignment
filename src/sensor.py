@@ -101,32 +101,6 @@ class ArraySensor:
 
         return array_transfer_vector(u, self.positions, x, self.velocity_factor, xtype)
 
-    def AF(self, u0: np.ndarray, u_: np.ndarray, x: np.ndarray | float, xtype: int = FREQUENCY):
-        """Computes the array factor.
-
-        Parameters
-        ----------
-        u0 : ndarray
-            Directions in form of a 1x2 or 1x3 matrix.
-        u_ : ndarray
-            Directions in form of a Qx2 or Qx3 matrix.
-        x : ndarray | float
-            Waveparameter in form of either a vector of length K
-            or a singular value. See xtype for input types.
-        xtype : int (FREQUENCY|ANGULAR_FREQUENCY|WAVELENGTH)
-            Weather x is given as frequency, angular frequency or
-            wavelength values. (default = FREQUENCY)
-
-        Returns
-        -------
-        A : ndarray (complex)
-            The array transfer matrix A[k, m, q] = a_m(u_q; w_k)."""
-
-        a0 = array_transfer_vector(u0, self.positions, x, self.velocity_factor, xtype)
-        a_ = array_transfer_vector(u_, self.positions, x, self.velocity_factor, xtype)
-
-        return a0.conj().T @ a_
-
     def Z(self, window: str = 'hann', nperseg: int = 256) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Compute the Short Time Fourier Transform (STFT).
 
