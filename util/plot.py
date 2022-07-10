@@ -25,8 +25,8 @@ def plot_channel_spectogram(channel, framerate):
     plt.show()
 
 
-def get_u(n: int, w: int = 1):
-    u = np.mgrid[:n + 1, :n + 1].T.reshape(-1, 2) * 2 / n - 1
+def get_u(n: int, w: int = 1, center: list[float, float] = [0, 0], scale: float = 1):
+    u = center + scale * (np.mgrid[:n + 1, :n + 1].T.reshape(-1, 2) * 2 / n - 1)
     m = np.where(np.square(u).sum(axis=1) <= 1)
 
     return np.c_[u[m], w * np.sqrt(1 - np.square(u[m]).sum(axis=1))], m
@@ -44,10 +44,12 @@ def get_images(X: np.ndarray, mask: list[int, ], n: int, layer: int = 0):
     return images.T.reshape(shape)
 
 
-def show_image(ax, image: np.ndarray, cmap: str):
-    img = ax.imshow(image[::-1], extent=[-1, 1, -1, 1], cmap=cmap)
-    ax.set_xticks([-1, 0, 1])
-    ax.set_yticks([-1, 0, 1])
+def show_image(ax, image: np.ndarray, cmap: str, center: list[float, float] = [0, 0], scale: float = 1):
+    extend = np.array([np.subtract(center, scale), np.add(center, scale)]).T.reshape(-1).tolist()
+
+    img = ax.imshow(image[::-1], extent=extend, cmap=cmap)
+    ax.set_xticks([extend[0], center[0], extend[1]])
+    ax.set_yticks([extend[2], center[1], extend[3]])
 
     return img
 
@@ -100,15 +102,15 @@ def plot_beampattern(beamformer: Beamformer, frequency: float, n: int, w: int = 
     plt.show()
 
 
-def plot_spatial_power_spectrum(beamformer: Beamformer, n: int, w: int = 1):
-    u, m = get_u(n, w)
+def plot_spatial_power_spectrum(beamformer: Beamformer, n: int, center: list[float, float] = [0, 0], scale: float = 1, w: int = 1):
+    u, m = get_u(n, w, center, scale)
 
     B = beamformer.spatial_power_spectrum(u)
 
-    image = get_images(B, m, n)
+    image = get_images(np.log10(np.abs(B)), m, n)
 
     _, ax = plt.subplots(1)
 
-    show_image(ax, image, 'plasma')
+    show_image(ax, image, 'plasma', center, scale)
 
     plt.show()
