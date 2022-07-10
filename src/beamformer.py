@@ -7,8 +7,8 @@ from .sensor import ArraySensor
 
 class Beamformer:
 
-    def __init__(self, array_sensor: ArraySensor):
-        f, t, Z = array_sensor.Z(nperseg=8192)
+    def __init__(self, array_sensor: ArraySensor, frequency_bins: int = 8192):
+        f, t, Z = array_sensor.Z(nperseg=frequency_bins)
 
         ### TMP ###
         T = Z.shape[-1] // 2
@@ -67,14 +67,14 @@ class ConventionalBeamformer(Beamformer):
         a = self.A(u, self.f[idx])
 
         # should be equivalent to a / sqrt(a.H * a) but way faster
-        return a / np.linalg.norm(a, axis=0)
+        return a / 4  # np.linalg.norm(a, axis=0)
 
     def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
         a = self.A(u, self.f[idx])
 
         c = np.einsum('mq, nq, mn -> q', a.conj(), a, self.R[idx])
 
-        return c / np.linalg.norm(a, axis=0)
+        return c / 4  # np.linalg.norm(a, axis=0)
 
 
 class CaponBeamformer(Beamformer):

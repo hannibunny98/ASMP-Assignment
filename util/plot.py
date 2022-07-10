@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.beamformer import Beamformer
 from src.sensor import ArraySensor
 
 
@@ -24,14 +25,19 @@ def plot_channel_spectogram(channel, framerate):
     plt.show()
 
 
+def get_u(n: int, w: int = 1):
+    u = np.mgrid[:n + 1, :n + 1].T.reshape(-1, 2) * 2 / n - 1
+    m = np.where(np.square(u).sum(axis=1) <= 1)
+
+    return np.c_[u[m], w * np.sqrt(1 - np.square(u[m]).sum(axis=1))], m
+
+
 def plot_array_transfer_vector(array_sensor: ArraySensor, frequency: float, n: int, w: int = 1):
+    u, m = get_u(n, w)
+
+    A = array_sensor.A(u, frequency)
+
     images = np.full(((n + 1)**2, array_sensor.positions.shape[0]), np.nan)
-
-    d = np.mgrid[:n + 1, :n + 1].T.reshape(-1, 2) * 2 / n - 1
-    m = np.where(np.square(d).sum(axis=1) <= 1)
-
-    A = array_sensor.A(np.c_[d[m], w * np.sqrt(1 - np.square(d[m]).sum(axis=1))], frequency)
-
     images[m] = np.angle(A).T
     images = images.T.reshape((-1, n + 1, n + 1))
 
@@ -46,5 +52,23 @@ def plot_array_transfer_vector(array_sensor: ArraySensor, frequency: float, n: i
         axes.set_yticks([-1, 0, 1])
 
     fig.colorbar(img, ax=ax, location='right')
+
+    plt.show()
+
+
+def plot_spatial_power_spectrum(beamformer: Beamformer, n: int, w: int = 1):
+    u, m = get_u(n, w)
+
+    B = beamformer.spatial_power_spectrum(u)
+
+    image = np.full(((n + 1)**2), np.nan)
+    image[m] = B.T
+    image = image.T.reshape((n + 1, n + 1))
+
+    _, ax = plt.subplots(1)
+
+    ax.imshow(image[::-1, ::-1], extent=[-1, 1, -1, 1], cmap='plasma')
+    ax.set_xticks([-1, 0, 1])
+    ax.set_yticks([-1, 0, 1])
 
     plt.show()
