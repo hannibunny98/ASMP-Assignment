@@ -14,8 +14,10 @@ if __name__ == '__main__':
     array_sensor = ArraySensor('./Measurements/CrowsNest.csv', './Measurements/measurements1.wav', 343)
     beamformer = ConventionalBeamformer(array_sensor)
 
+    # plt.plot_array_factor(array_sensor, 9000, 500, w=1)
     # plt.plot_array_transfer_vector(array_sensor, 9000, 500, w=1)
-    plt.plot_spatial_power_spectrum(beamformer, 25, w=-1)
+    plt.plot_spatial_power_spectrum(beamformer, 100, w=-1)
+    # plt.plot_beampattern(beamformer, 9000, 100, w=1)
 
     # Time = get_timesteps(array_sensor.samplerate, array_sensor.measurments)
     # plt2.plot_channels(array_sensor.measurments, Time)

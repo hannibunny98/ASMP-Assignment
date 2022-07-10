@@ -26,6 +26,15 @@ class Beamformer:
 
         self.A = lambda u, f: array_sensor.A(u, f)
 
+    def beampattern(self, u0: np.ndarray, u_: np.ndarray, frequency: float):
+        gt = np.where(self.f > frequency)[0][0]
+        st = np.where(self.f < frequency)[0][-1]
+
+        C = self._weighting_vector(u0, (st + gt) // 2)
+        A = self.A(u_, frequency)
+
+        return C.conj().T @ A
+
     def weighting_vector(self, u: np.ndarray) -> np.ndarray:
         """Computes the complex weighting vectors.
 
@@ -41,7 +50,7 @@ class Beamformer:
 
         result = []
 
-        for idx in range(len(self.f)):
+        for idx in tqdm(range(len(self.f))):
             result.append(self._weighting_vector(u, idx))
 
         return np.array(result)
@@ -53,7 +62,7 @@ class Beamformer:
         result = 0
 
         for idx in tqdm(range(len(self.f))):
-            result += np.abs(self._spatial_power_spectrum(u, idx))
+            result += self._spatial_power_spectrum(u, idx)
 
         return result
 
@@ -66,15 +75,18 @@ class ConventionalBeamformer(Beamformer):
     def _weighting_vector(self, u: np.ndarray, idx: int) -> np.ndarray:
         a = self.A(u, self.f[idx])
 
-        # should be equivalent to a / sqrt(a.H * a) but way faster
-        return a / 4  # np.linalg.norm(a, axis=0)
+        # should be equivalent to a / sqrt(a.H * a) or a / np.linalg.norm(a, axis=0) but way faster
+        return a / np.sqrt(a.shape[0])
 
     def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
         a = self.A(u, self.f[idx])
 
+        # c = np.array([a.T[i].conj() @ self.R[idx] @ a[:, i] for i in range(a.shape[-1])])
+
         c = np.einsum('mq, nq, mn -> q', a.conj(), a, self.R[idx])
 
-        return c / 4  # np.linalg.norm(a, axis=0)
+        # should be equivalent to c / a.H * a or c / np.linalg.norm(a, axis=0)**2 but way faster
+        return c / a.shape[0]
 
 
 class CaponBeamformer(Beamformer):
@@ -99,4 +111,4 @@ class WierdBeamformer(Beamformer):
     def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
         a = self.A(u, self.f[idx])
 
-        return (a.conj().T @ self.Z[idx]).sum(axis=1) / self.Z.shape[-1]
+        return np.linalg.norm(a.conj().T @ self.Z[idx], axis=-1)**2

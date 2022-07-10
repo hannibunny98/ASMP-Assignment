@@ -32,26 +32,70 @@ def get_u(n: int, w: int = 1):
     return np.c_[u[m], w * np.sqrt(1 - np.square(u[m]).sum(axis=1))], m
 
 
+def get_images(X: np.ndarray, mask: list[int, ], n: int, layer: int = 0):
+    if layer != 0:
+        shape = (layer, n + 1, n + 1)
+    else:
+        shape = (n + 1, n + 1)
+
+    images = np.full((np.prod(shape[-2:]), *shape[:-2]), np.nan)
+    images[mask] = X.T
+
+    return images.T.reshape(shape)
+
+
+def show_image(ax, image: np.ndarray, cmap: str):
+    img = ax.imshow(image[::-1], extent=[-1, 1, -1, 1], cmap=cmap)
+    ax.set_xticks([-1, 0, 1])
+    ax.set_yticks([-1, 0, 1])
+
+    return img
+
+
 def plot_array_transfer_vector(array_sensor: ArraySensor, frequency: float, n: int, w: int = 1):
     u, m = get_u(n, w)
 
     A = array_sensor.A(u, frequency)
 
-    images = np.full(((n + 1)**2, array_sensor.positions.shape[0]), np.nan)
-    images[m] = np.angle(A).T
-    images = images.T.reshape((-1, n + 1, n + 1))
+    images = get_images(np.angle(A), m, n, A.shape[0])
 
     x = np.sqrt(images.shape[0]).astype(int)
     y = images.shape[0] // x + images.shape[0] % x
 
     fig, ax = plt.subplots(x, y, tight_layout=False, sharey=True, sharex=True)
 
-    for axes, image in zip(ax.reshape(-1), images):
-        img = axes.imshow(image[::-1, ::-1], extent=[-1, 1, -1, 1], cmap='hsv')
-        axes.set_xticks([-1, 0, 1])
-        axes.set_yticks([-1, 0, 1])
+    img = [show_image(a, i, 'hsv') for a, i in zip(ax.reshape(-1), images)]
+    fig.colorbar(img[-1], ax=ax, location='right')
 
-    fig.colorbar(img, ax=ax, location='right')
+    plt.show()
+
+
+def plot_array_factor(array_sensor: ArraySensor, frequency: float, n: int, w: int = 1):
+    u0 = np.array([[0, 0]])
+    u_, m = get_u(n, w)
+
+    AF = array_sensor.AF(u0, u_, frequency)[0]
+
+    image = get_images(np.abs(AF), m, n)
+
+    _, ax = plt.subplots(1)
+
+    show_image(ax, image, 'plasma')
+
+    plt.show()
+
+
+def plot_beampattern(beamformer: Beamformer, frequency: float, n: int, w: int = 1):
+    u0 = np.array([[0, 0]])
+    u_, m = get_u(n, w)
+
+    B = beamformer.beampattern(u0, u_, frequency)[0]
+
+    image = get_images(np.abs(B), m, n)
+
+    _, ax = plt.subplots(1)
+
+    show_image(ax, image, 'plasma')
 
     plt.show()
 
@@ -61,14 +105,10 @@ def plot_spatial_power_spectrum(beamformer: Beamformer, n: int, w: int = 1):
 
     B = beamformer.spatial_power_spectrum(u)
 
-    image = np.full(((n + 1)**2), np.nan)
-    image[m] = B.T
-    image = image.T.reshape((n + 1, n + 1))
+    image = get_images(B, m, n)
 
     _, ax = plt.subplots(1)
 
-    ax.imshow(image[::-1, ::-1], extent=[-1, 1, -1, 1], cmap='plasma')
-    ax.set_xticks([-1, 0, 1])
-    ax.set_yticks([-1, 0, 1])
+    show_image(ax, image, 'plasma')
 
     plt.show()
