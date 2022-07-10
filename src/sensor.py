@@ -57,7 +57,7 @@ class ArraySensor:
         Parameters
         ----------
         position_file : str
-            Path to a .csv file containing the sensor element positions.
+            Path to a .csv file containing the sensor element positions in cm.
             The .csv should have a header row where the x, y and z columns
             are specified.
         measurments_file : str
@@ -65,9 +65,9 @@ class ArraySensor:
             as seqerate channels.
         velocity_factor : float
             Wave propagation speed of the measured wave type.
-            e.g. 340.29 for sound waves or 299792458 for electromagnetic waves."""
+            e.g. 343 for sound waves or 299792458 for electromagnetic waves."""
 
-        positions = read_csv(position_file, columns=['x', 'y', 'z'])
+        positions = read_csv(position_file, columns=['x', 'y', 'z']) / 100
         measurments, samplerate = read_wav(measurments_file)
 
         # confirm number of sensors is matches the number of channels in the measurment
@@ -151,6 +151,6 @@ class ArraySensor:
         Z : ndarray
             STFT of `self.measurments` Z[k, m, t]."""
 
-        f, t, Z = stft(self.measurments, 1 / self.samplerate, axis=0, window=window, nperseg=nperseg)  # , noverlap=nperseg - nperseg // 4)
+        f, t, Z = stft(self.measurments, self.samplerate, axis=0, window=window, nperseg=nperseg)  # , noverlap=nperseg - nperseg // 4)
 
-        return f * self.samplerate**2, t, Z
+        return f, t, Z
