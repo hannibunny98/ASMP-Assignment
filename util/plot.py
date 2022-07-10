@@ -25,7 +25,28 @@ def plot_channel_spectogram(channel, framerate):
     plt.show()
 
 
-def get_u(n: int, w: int = 1, center: list[float, float] = [0, 0], scale: float = 1):
+def get_u(n: int, center: list[float, float] = [0, 0], scale: float = 1, w: int = 1):
+    """Compute list of direction vectors.
+
+    Parameters
+    ----------
+    n : int
+        Resolution in u and v direction.
+    center : list[float, float]
+        Center around which (u, v) is sampled. (default=[0,0])
+    scale : float
+        The size of the sample window (center +- scale). (default=1)
+    w : int (-1|+1)
+        Either +1 for the upper half sphere or -1 for the lower half sphere.
+
+    Returns
+    -------
+    u : ndarray
+        A ndarray containing (u, v, w) coordinates normed to 1.
+    m : list[int, ]
+        A list containing the masking index used to create u from a
+        uniform sampled window of size (n+1)x(n+1)."""
+
     u = center + scale * (np.mgrid[:n + 1, :n + 1].T.reshape(-1, 2) * 2 / n - 1)
     m = np.where(np.square(u).sum(axis=1) <= 1)
 
@@ -55,7 +76,7 @@ def show_image(ax, image: np.ndarray, cmap: str, center: list[float, float] = [0
 
 
 def plot_array_transfer_vector(array_sensor: ArraySensor, frequency: float, n: int, w: int = 1):
-    u, m = get_u(n, w)
+    u, m = get_u(n, w=w)
 
     A = array_sensor.A(u, frequency)
 
@@ -74,7 +95,7 @@ def plot_array_transfer_vector(array_sensor: ArraySensor, frequency: float, n: i
 
 def plot_array_factor(array_sensor: ArraySensor, frequency: float, n: int, w: int = 1):
     u0 = np.array([[0, 0]])
-    u_, m = get_u(n, w)
+    u_, m = get_u(n, w=w)
 
     AF = array_sensor.AF(u0, u_, frequency)[0]
 
@@ -89,7 +110,7 @@ def plot_array_factor(array_sensor: ArraySensor, frequency: float, n: int, w: in
 
 def plot_beampattern(beamformer: Beamformer, frequency: float, n: int, w: int = 1):
     u0 = np.array([[0, 0]])
-    u_, m = get_u(n, w)
+    u_, m = get_u(n, w=w)
 
     B = beamformer.beampattern(u0, u_, frequency)[0]
 
@@ -103,11 +124,11 @@ def plot_beampattern(beamformer: Beamformer, frequency: float, n: int, w: int = 
 
 
 def plot_spatial_power_spectrum(beamformer: Beamformer, n: int, center: list[float, float] = [0, 0], scale: float = 1, w: int = 1):
-    u, m = get_u(n, w, center, scale)
+    u, m = get_u(n, center, scale, w=w)
 
     B = beamformer.spatial_power_spectrum(u)
 
-    image = get_images(np.log10(np.abs(B)), m, n)
+    image = get_images(np.abs(B), m, n)
 
     _, ax = plt.subplots(1)
 
