@@ -1,6 +1,7 @@
 import numpy as np
 
 from tqdm import tqdm
+import scipy.optimize as opt
 
 from .sensor import ArraySensor
 
@@ -180,6 +181,24 @@ class Beamformer:
 
     def _spatial_power_spectrum(self, u: np.ndarray, idx: int) -> np.ndarray:
         raise NotImplementedError()
+
+    def logL(self, log_par, data):
+        N = len(data)
+
+        a, b = np.exp(log_par)
+        log = N * np.log(a * b) + (a - 1) * np.sum(np.log(data)) + (b - 1) * np.sum(np.log(1 - np.power(data, a)))
+        return log
+
+    def maximum_lieklihood(self, u):
+        data = self.spatial_power_spectrum(u)
+        res = opt.minimize(
+        fun=lambda log_params, data: -self.logL(log_params, data),
+        x0=np.array([0.5, 0.5]), args=(data,), method='BFGS')
+
+        a, b = np.exp(res.x)
+        return a, b
+
+
 
 
 class ConventionalBeamformer(Beamformer):
